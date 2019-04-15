@@ -5,10 +5,14 @@ import torch
 import nltk
 
 # Parameters
+dtype = torch.float
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 batch_size = 64
 
 # GloVe
+print("Loading GloVe... ", end='')
 glove = GloVe('840B')
+print("Done")
 
 
 def get_batches(data):
