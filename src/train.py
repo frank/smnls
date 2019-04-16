@@ -3,11 +3,12 @@ import torch
 import nltk
 import sys
 
-##########################
-# IMPORTANT NOTES
-# batch packing pad packing torch.nn.sequence something google it up. also pad packing
-##########################
+from encoder import Baseline
+from classifier import InferClassifier
 
+# TODO: batch packing and pad packing
+
+################################ INITIALIZATION ################################
 dtype = torch.float
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -43,6 +44,7 @@ print("Done")
 print("Loading embediings... ", end='')
 embedding = torch.nn.Embedding.from_pretrained(text_field.vocab.vectors)
 print("Done")
+################################ INITIALIZATION ################################
 
 
 def preprocess_batch(batch):
@@ -52,24 +54,16 @@ def preprocess_batch(batch):
     return p_batch, h_batch, l_batch
 
 
-def get_average_embeddings(p_batch, h_batch):
-    u_batch = torch.div(torch.sum(p_batch[0], 0),
-                        p_batch[1].view(batch_size, 1))
-    v_batch = torch.div(torch.sum(h_batch[0], 0),
-                        h_batch[1].view(batch_size, 1))
-    return u_batch, v_batch
-
-
 def train(args):
+    encoder = Baseline()
+    classifier = InferClassifier(encoder, batch_size)
+    # one iteration of this loop is an epoch
     for batch in train_iter:
+        # p_batch and h_batch are tuples. The first element is the
+        # embedded batch, and the second contains all sentence lengths
         p_batch, h_batch, l_batch = preprocess_batch(batch)
-        # batch.size() -> [max_len, batch_size, embedding_size]
-        u_batch, v_batch = get_average_embeddings(p_batch, h_batch)
-        print("u_batch:", u_batch.size())
-        print(u_batch)
-        print("v_batch:", v_batch.size())
-        print(v_batch)
-        input()
+        out = classifier.forward(p_batch, h_batch)
+
 
 
 if __name__ == '__main__':
