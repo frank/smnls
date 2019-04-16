@@ -1,4 +1,5 @@
 import torchtext
+import torch
 import nltk
 
 dtype = torch.float
@@ -21,9 +22,7 @@ train, dev, test = torchtext.datasets.SNLI.splits(text_field, label_field)
 
 glove = torchtext.vocab.GloVe()
 
-text_field.build_vocab(train, dev, test,
-                       vectors=glove)
-
+text_field.build_vocab(train, dev, test, vectors=glove)
 label_field.build_vocab(test)
 
 train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(datasets=(train, dev, test),
@@ -32,5 +31,9 @@ train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(datasets=
                                                                        shuffle=True)
 
 # Vocabulary matrix that can be indexed
-text_field.vocab.vectors
+embedding = torch.nn.Embedding.from_pretrained(text_field.vocab.vectors)
 # Next step: use nn.embeddings
+
+batch = next(iter(train_iter))
+batch_premise_embeddings = embedding(batch.premise[0])
+# batch packing pad packing torch.nn.sequence something google it up. also pad packing

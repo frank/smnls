@@ -1,66 +1,43 @@
-from torchnlp.word_to_vector import GloVe
-from torchnlp.datasets import snli_dataset
-import numpy as np
+import torchtext
 import torch
 import nltk
 
-# Parameters
 dtype = torch.float
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+def tokenizer(sentence):
+    return [word.lower() for word in nltk.word_tokenize(sentence)]
+
+# Parameters
 batch_size = 64
-
-# GloVe
-print("Loading GloVe... ", end='')
-glove = GloVe('840B')
-print("Done")
-
-
-def get_batches(data):
-    """
-    Generator function that yields shuffled mini-batches. Each batch includes
-    a list of tokenized premises, a list of tokenized hypotheses, and a list
-    of labels.
-    """
-    n_samples = len(data)
-    remaining_samples = batch_size - (n_samples % batch_size)
-    all_idxs = np.append(np.random.permutation(n_samples),
-                         np.random.randint(0, n_samples, size=remaining_samples))
-    n_batches = len(all_idxs) / batch_size
-    batch_idxs = np.split(all_idxs, n_batches)
-    for idxs in batch_idxs:
-        idxs_list = idxs.tolist()
-        p_batch = [nltk.word_tokenize(data[i]['premise']) for i in idxs_list]
-        h_batch = [nltk.word_tokenize(data[i]['hypothesis']) for i in idxs_list]
-        l_batch = [nltk.word_tokenize(data[i]['label']) for i in idxs_list]
-        yield p_batch, h_batch, l_batch
+# text_field = torchtext.data.Field(sequential=True,
+#                                   tokenize=tokenizer,
+#                                   include_lengths=True,
+#                                   use_vocab=True)
+# label_field = torchtext.data.Field(sequential=False,
+#                                    use_vocab=True,
+#                                    pad_token=None,
+#                                    unk_token=None)
+# glove = torchtext.vocab.GloVe()
 
 
-def get_average_embedding_batches(data):
+def process_batch(batch, embedding):
+    p_batch = (embedding(batch.premise[0]), batch.premise[1])
+    h_batch = (embedding(batch.hypothesis[0]), batch.hypothesis[1])
+    l_batch = batch.label
+    return p_batch, h_batch, l_batch
+
+
+def get_average_embeddings(p_batch, h_batch):
     """
     Get sentence embeddings using the average method in batches.
     """
-    for p_batch, h_batch, l_batch in get_batches(data):
-        u_batch = []
-        v_batch = []
-        # for each sentence in a batch
-        # get the average of their embeddings
-        # append average to u_batch
-        for i in range(batch_size):
-            u_batch.append(get_sentence_average_embedding(p_batch[i]))
-            v_batch.append(get_sentence_average_embedding(h_batch[i]))
-        yield u_batch, v_batch, l_batch
-
-
-def get_sentence_average_embedding(sentence):
-    """
-    Given a tokenized sentence, it returns the average embedding
-    for that sentence
-    """
-    n_tokens = len(sentence)
-    sum = torch.zeros_like(glove[sentence[0]])
-    for token in sentence:
-        sum += glove[token]
-    return sum / n_tokens
+    # batch.size() = [max_len, batch_size, embedding_size]
+    u_batch = torch.div(torch.sum(p_batch[0], 0),
+                        p_batch[1].view(batch_size, 1))
+    v_batch = torch.div(torch.sum(h_batch[0], 0),
+                        h_batch[1].view(batch_size, 1))
+    return u_batch, v_batch
 
 
 if __name__ == '__main__':
