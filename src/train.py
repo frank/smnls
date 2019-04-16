@@ -3,6 +3,11 @@ import torch
 import nltk
 import sys
 
+##########################
+# IMPORTANT NOTES
+# batch packing pad packing torch.nn.sequence something google it up. also pad packing
+##########################
+
 dtype = torch.float
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -40,19 +45,29 @@ embedding = torch.nn.Embedding.from_pretrained(text_field.vocab.vectors)
 print("Done")
 
 
+def preprocess_batch(batch):
+    p_batch = (embedding(batch.premise[0]), batch.premise[1].to(dtype))
+    h_batch = (embedding(batch.hypothesis[0]), batch.hypothesis[1].to(dtype))
+    l_batch = batch.label
+    return p_batch, h_batch, l_batch
+
+
+def get_average_embeddings(p_batch, h_batch):
+    u_batch = torch.div(torch.sum(p_batch[0], 0),
+                        p_batch[1].view(batch_size, 1))
+    v_batch = torch.div(torch.sum(h_batch[0], 0),
+                        h_batch[1].view(batch_size, 1))
+    return u_batch, v_batch
+
+
 def train(args):
     for batch in train_iter:
-        p_batch = (embedding(batch.premise[0]), batch.premise[1])
-        h_batch = (embedding(batch.hypothesis[0]), batch.hypothesis[1])
-        l_batch = batch.label
-        # batch.size() = [max_len, batch_size, embedding_size]
-        u_batch = torch.div(torch.sum(p_batch[0], 0),
-                            p_batch[1].view(batch_size, 1))
-        v_batch = torch.div(torch.sum(h_batch[0], 0),
-                            h_batch[1].view(batch_size, 1))
-        print("u_batch:", u_batch[0].size())
+        p_batch, h_batch, l_batch = preprocess_batch(batch)
+        # batch.size() -> [max_len, batch_size, embedding_size]
+        u_batch, v_batch = get_average_embeddings(p_batch, h_batch)
+        print("u_batch:", u_batch.size())
         print(u_batch)
-        print("v_batch:", v_batch[0].size())
+        print("v_batch:", v_batch.size())
         print(v_batch)
         input()
 
