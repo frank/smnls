@@ -3,6 +3,9 @@ import torch.nn as nn
 
 class InferClassifier(nn.Module):
 
+    dtype = torch.float
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     def __init__(self, encoder, batch_size):
         super(InferClassifier, self).__init__()
         self.encoder = encoder
