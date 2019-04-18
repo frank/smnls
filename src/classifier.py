@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-torch.set_default_tensor_type(torch.cuda.FloatTensor)
+torch.set_default_tensor_type(torch.FloatTensor)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -11,7 +11,7 @@ class MLPClassifier(nn.Module):
         super(MLPClassifier, self).__init__()
         self.encoder = encoder
         self.batch_size = batch_size
-        self.input_size = 1200
+        self.input_size = 4 * self.encoder.get_dimensionality()
         self.hidden_size = 512
         self.output_size = 3
         self.classifier = nn.Sequential(
@@ -27,8 +27,8 @@ class MLPClassifier(nn.Module):
         h_vecs = h_batch[0]
         h_lens = h_batch[1]
 
-        u_batch = self.encoder.forward(p_vecs, p_lens)
-        v_batch = self.encoder.forward(h_vecs, h_lens)
+        u_batch = self.encoder.forward(p_vecs, p_lens).to(device)
+        v_batch = self.encoder.forward(h_vecs, h_lens).to(device)
 
         x = self.shared_sentence_encoder(u_batch, v_batch)
 

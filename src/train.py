@@ -11,7 +11,7 @@ from classifier import MLPClassifier
 
 
 # ------------------------------ INITIALIZATION --------------------------------
-torch.set_default_tensor_type(torch.cuda.FloatTensor)
+torch.set_default_tensor_type(torch.FloatTensor)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
