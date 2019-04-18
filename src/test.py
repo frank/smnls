@@ -1,40 +1,39 @@
 import torch
+import pickle
+
+from encoder import Baseline, LSTM
+from classifier import MLPClassifier
+
+# ------------------------------ INITIALIZATION --------------------------------
+torch.set_default_tensor_type(torch.cuda.FloatTensor)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 batch_size = 64
-D_in, H, D_out = 1200, 512, 3
 
-# Create random Tensors to hold inputs and outputs
-x = torch.randn(batch_size, D_in)
-y = torch.randn(batch_size, D_out)
+with open("batch_ex.pkl", "rb") as file:
+    batch = pickle.load(file)
 
-model = torch.nn.Sequential(
-    torch.nn.Linear(D_in, H),
-    torch.nn.Tanh(),
-    torch.nn.Linear(H, D_out),
-)
-loss_fn = torch.nn.MSELoss(reduction='sum')
+p_batch, h_batch, l_batch = batch['p'], batch['h'], batch['l']
+# ------------------------------ INITIALIZATION --------------------------------
 
-learning_rate = 1e-4
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.01)
-for t in range(500):
-    # Forward pass: compute predicted y by passing x to the model.
-    y_pred = model(x)
+encoder = LSTM().to(device=device)
+classifier = MLPClassifier(encoder, batch_size).to(device=device)
+optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-3, weight_decay=0.01)
+cross_entropy = torch.nn.CrossEntropyLoss()
 
-    # Compute and print loss.
-    loss = loss_fn(y_pred, y)
-    print(t, loss.item())
+for epoch in range(20):
+    preds = classifier.forward(p_batch, h_batch)
 
-    # Before the backward pass, use the optimizer object to zero all of the
-    # gradients for the variables it will update (which are the learnable
-    # weights of the model). This is because by default, gradients are
-    # accumulated in buffers( i.e, not overwritten) whenever .backward()
-    # is called. Checkout docs of torch.autograd.backward for more details.
+    # compute loss
+    loss = cross_entropy(preds, l_batch)
+
+    # reset gradients before backwards pass
     optimizer.zero_grad()
 
-    # Backward pass: compute gradient of the loss with respect to model
-    # parameters
+    # backward pass
     loss.backward()
 
-    # Calling the step function on an Optimizer makes an update to its
-    # parameters
+    # update weights
     optimizer.step()
+    print("Epoch", str(epoch + 1) if epoch + 1 > 9 else ' ' + str(epoch + 1),
+          "training loss:", round(loss.item(), 3))

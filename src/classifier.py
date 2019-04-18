@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
 
+torch.set_default_tensor_type(torch.cuda.FloatTensor)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class MLPClassifier(nn.Module):
-    torch.set_default_tensor_type(torch.cuda.FloatTensor)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def __init__(self, encoder, batch_size):
         super(MLPClassifier, self).__init__()

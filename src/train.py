@@ -21,7 +21,7 @@ def tokenizer(sentence):
 
 # Parameters
 batch_size = 64
-max_epochs = 50
+max_epochs = 20
 text_field = torchtext.data.Field(sequential=True,
                                   tokenize=tokenizer,
                                   include_lengths=True,
@@ -30,39 +30,39 @@ label_field = torchtext.data.Field(sequential=False,
                                    use_vocab=True,
                                    pad_token=None,
                                    unk_token=None)
-print("SNLI: loading...", end='\r')
+print("SNLI:\t\tloading...", end='\r')
 full_train_set, full_dev_set, full_test_set = torchtext.datasets.SNLI.splits(text_field, label_field)
-print("SNLI: loaded    ")
-print("GloVe: loading...", end='\r')
+print("SNLI:\t\tloaded    ")
+print("GloVe:\t\tloading...", end='\r')
 glove = torchtext.vocab.GloVe()
-print("GloVe: loaded    ")
-print("Vocabulary: loading...", end='\r')
+print("GloVe:\t\tloaded    ")
+print("Vocabulary:\tloading...", end='\r')
 text_field.build_vocab(full_train_set, full_dev_set, full_test_set, vectors=glove)
 label_field.build_vocab(full_test_set)
-print("Vocabulary: loaded    ")
-print("Embeddings: loading...", end='\r')
+print("Vocabulary:\tloaded    ")
+print("Embeddings:\tloading...", end='\r')
 embedding = torch.nn.Embedding.from_pretrained(text_field.vocab.vectors)
 embedding.requires_grad = False
-print("Embeddings: loaded    ")
+print("Embeddings:\tloaded    ")
 accuracies = []
 # ------------------------------ INITIALIZATION --------------------------------
 
 
-def reduce_dataset(train_set, dev_set, test_set, percentage=1.):
-    if percentage < 1.:
+def reduce_dataset(train_set, dev_set, test_set, n_samples=0):
+    if n_samples > 0:
         start = 0
         # train set
-        train_end = int(len(train_set) * percentage)
+        train_end = n_samples if n_samples < len(train_set) else len(train_set)
         train_set.examples = train_set.examples[start:train_end]
         # dev set
-        dev_end = int(len(train_set) * percentage)
+        dev_end = n_samples if n_samples < len(dev_set) else len(dev_set)
         dev_set.examples = dev_set.examples[start:dev_end]
         # test set
-        test_end = int(len(train_set) * percentage)
+        test_end = n_samples if n_samples < len(test_set) else len(test_set)
         test_set.examples = test_set.examples[start:test_end]
-        print("Reduced sizes:\ttest set:", train_end,
-              "\n\t\tdev set:", dev_end,
-              "\n\t\ttest set:", test_end)
+        print("Reduced sizes:\ttest_set[" + str(train_end) + "]",
+              "\n\t\tdev_set[" + str(dev_end) + "]",
+              "\n\t\ttest_set[" + str(test_end) + "]\n")
     return train_set, dev_set, test_set
 
 
@@ -82,13 +82,6 @@ def get_accuracy(y, t):
     return np.mean(accuracies)
 
 
-def tensor_to_onehot(labels):
-    batch_len = len(labels)
-    labels_onehot = torch.zeros(batch_len, 3)
-    labels_onehot.scatter_(1, labels.view(batch_len, 1), 1)
-    return labels_onehot.to(dtype=torch.float)
-
-
 def train(args):
     # termination flag
     done = False
@@ -96,13 +89,16 @@ def train(args):
     encoder = Baseline()
     classifier = MLPClassifier(encoder, batch_size).to(device=device)
 
-    optimizer = torch.optim.SGD(classifier.parameters(), lr=0.1, weight_decay=0.01)
+    # optimizer = torch.optim.SGD(classifier.parameters(), lr=0.1, weight_decay=0.01)
+    optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-3, weight_decay=0.01)
 
     cross_entropy = torch.nn.CrossEntropyLoss()
+
     train_set, dev_set, test_set = reduce_dataset(full_train_set,
                                                   full_dev_set,
                                                   full_test_set,
-                                                  percentage=5e-5)
+                                                  n_samples=15)
+
     # one iteration of this loop is an epoch
     for epoch in range(max_epochs):
         epoch_accuracies = []
@@ -135,8 +131,8 @@ def train(args):
             mb_accuracy = get_accuracy(preds, l_batch)
             epoch_accuracies.append(mb_accuracy)
 
-        print("Epoch", str(epoch + 1) if epoch + 1 > 9 else ' ' + str(epoch + 1), "training accuracy:",
-              round(np.mean(epoch_accuracies), 2))
+        print("Epoch", str(epoch + 1) if epoch + 1 > 9 else ' ' + str(epoch + 1),
+              "training accuracy:", round(np.mean(epoch_accuracies), 2))
 
 
 if __name__ == '__main__':
