@@ -4,14 +4,11 @@ import nltk
 import sys
 import numpy as np
 
-from encoder import Baseline
+from encoder import Baseline, LSTM
 from classifier import MLPClassifier
 
-# TODO: batch packing and pad packing
-
-
 # ------------------------------ INITIALIZATION --------------------------------
-torch.set_default_tensor_type(torch.FloatTensor)
+torch.set_default_tensor_type(torch.cuda.FloatTensor)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -21,7 +18,7 @@ def tokenizer(sentence):
 
 # Parameters
 batch_size = 64
-max_epochs = 20
+max_epochs = 30
 text_field = torchtext.data.Field(sequential=True,
                                   tokenize=tokenizer,
                                   include_lengths=True,
@@ -83,11 +80,10 @@ def get_accuracy(y, t):
 
 
 def train(args):
-    # termination flag
-    done = False
+    torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-    encoder = Baseline()
-    classifier = MLPClassifier(encoder, batch_size).to(device=device)
+    encoder = LSTM().to(device)
+    classifier = MLPClassifier(encoder, batch_size).to(device)
 
     # optimizer = torch.optim.SGD(classifier.parameters(), lr=0.1, weight_decay=0.01)
     optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-3, weight_decay=0.01)
