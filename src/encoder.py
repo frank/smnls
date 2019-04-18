@@ -73,3 +73,69 @@ class LSTM(nn.Module):
     def get_dimensionality(self):
         return self.hidden_size
 
+
+class BiLSTM(nn.Module):
+
+    def __init__(self):
+        super(BiLSTM, self).__init__()
+        self.input_size = 300
+        self.hidden_size = 2048
+        self.cell = nn.LSTM(input_size=self.input_size,
+                            hidden_size=self.hidden_size,
+                            bidirectional=True)
+
+    def forward(self, batch_vecs, batch_lens):
+        packed_sequence, sorted_lens, undo_indices = pack_batch(batch_vecs, batch_lens)
+
+        packed_y, (h_n, c_n) = self.cell(packed_sequence)
+
+        y_full, y_lens = pad_batch(packed_y, sorted_lens, undo_indices)
+
+        # get the hidden state for every last word
+        y = torch.stack([y_full[l - 1, i, :] for i, l in enumerate(y_lens)])
+
+        return y
+
+    def get_dimensionality(self):
+        return self.hidden_size * 2
+
+    # TODO: delete once sure it's useless
+    def get_sentence_encodings(self, y_full, y_lens):
+        # use this if torch is preserving word to hidden state correspondence
+
+        # in the third dimension, 0 is now forward and 1 backward
+        y_unpacked = y_full.view(max(y_lens), 64, 2, self.hidden_size)
+
+        y = []
+        for b in range(64):
+            forward = y_unpacked[y_lens[b]-1, b, 0, :]
+            backward = y_unpacked[0, b, 1, :]
+            y.append(torch.cat((forward, backward)))
+
+        return torch.stack(y)
+
+
+class BiLSTM(nn.Module):
+
+    def __init__(self):
+        super(BiLSTM, self).__init__()
+        self.input_size = 300
+        self.hidden_size = 2048
+        self.cell = nn.LSTM(input_size=self.input_size,
+                            hidden_size=self.hidden_size,
+                            bidirectional=True)
+
+    def forward(self, batch_vecs, batch_lens):
+        packed_sequence, sorted_lens, undo_indices = pack_batch(batch_vecs, batch_lens)
+
+        packed_y, (h_n, c_n) = self.cell(packed_sequence)
+
+        y_full, y_lens = pad_batch(packed_y, sorted_lens, undo_indices)
+
+        # get the hidden state for every last word
+        y = torch.stack([y_full[l - 1, i, :] for i, l in enumerate(y_lens)])
+
+        return y
+
+    def get_dimensionality(self):
+        return self.hidden_size * 2

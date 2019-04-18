@@ -4,7 +4,7 @@ import nltk
 import sys
 import numpy as np
 
-from encoder import Baseline, LSTM
+from encoder import Baseline, LSTM, BiLSTM
 from classifier import MLPClassifier
 
 # ------------------------------ INITIALIZATION --------------------------------
@@ -82,7 +82,7 @@ def get_accuracy(y, t):
 def train(args):
     torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-    encoder = LSTM().to(device)
+    encoder = BiLSTM().to(device)
     classifier = MLPClassifier(encoder, batch_size).to(device)
 
     # optimizer = torch.optim.SGD(classifier.parameters(), lr=0.1, weight_decay=0.01)

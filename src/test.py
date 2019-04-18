@@ -1,7 +1,7 @@
 import torch
 import pickle
 
-from encoder import Baseline, LSTM
+from encoder import Baseline, LSTM, BiLSTM
 from classifier import MLPClassifier
 
 # ------------------------------ INITIALIZATION --------------------------------
@@ -16,7 +16,7 @@ with open("batch_ex.pkl", "rb") as file:
 p_batch, h_batch, l_batch = batch['p'], batch['h'], batch['l']
 # ------------------------------ INITIALIZATION --------------------------------
 
-encoder = LSTM().to(device=device)
+encoder = BiLSTMaxpooling().to(device=device)
 classifier = MLPClassifier(encoder, batch_size).to(device=device)
 optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-3, weight_decay=0.01)
 cross_entropy = torch.nn.CrossEntropyLoss()
