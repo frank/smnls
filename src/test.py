@@ -1,18 +1,40 @@
-# import torchtext
-# import torch
-# import nltk
-#
-# from encoder import Baseline
-# from classifier import InferClassifier
-#
-# batch_size = 64
-# dtype = torch.float
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#
-# encoder = Baseline()
-# classifier = InferClassifier(encoder, batch_size).to(device=device)
-
 import torch
-torch.set_default_tensor_type(torch.cuda.FloatTensor)
-torch.cuda.is_available()
-torch.cuda.current_device()
+
+batch_size = 64
+D_in, H, D_out = 1200, 512, 3
+
+# Create random Tensors to hold inputs and outputs
+x = torch.randn(batch_size, D_in)
+y = torch.randn(batch_size, D_out)
+
+model = torch.nn.Sequential(
+    torch.nn.Linear(D_in, H),
+    torch.nn.Tanh(),
+    torch.nn.Linear(H, D_out),
+)
+loss_fn = torch.nn.MSELoss(reduction='sum')
+
+learning_rate = 1e-4
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.01)
+for t in range(500):
+    # Forward pass: compute predicted y by passing x to the model.
+    y_pred = model(x)
+
+    # Compute and print loss.
+    loss = loss_fn(y_pred, y)
+    print(t, loss.item())
+
+    # Before the backward pass, use the optimizer object to zero all of the
+    # gradients for the variables it will update (which are the learnable
+    # weights of the model). This is because by default, gradients are
+    # accumulated in buffers( i.e, not overwritten) whenever .backward()
+    # is called. Checkout docs of torch.autograd.backward for more details.
+    optimizer.zero_grad()
+
+    # Backward pass: compute gradient of the loss with respect to model
+    # parameters
+    loss.backward()
+
+    # Calling the step function on an Optimizer makes an update to its
+    # parameters
+    optimizer.step()
