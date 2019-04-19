@@ -2,6 +2,7 @@ import torchtext
 import torch
 import nltk
 import sys
+import os
 import numpy as np
 
 from encoder import Baseline, LSTM, BiLSTM
@@ -28,6 +29,14 @@ max_epochs = 100
 data_limit = 15
 train_accuracies = []
 dev_accuracies = []
+model_path = 'models/'
+checkpoint_name = 'checkpoint.tar'
+encoder_types = [
+    'baseline',
+    'lstm',
+    'bilstm',
+    'maxbilstm'
+]
 
 # Data loading
 text_field = torchtext.data.Field(sequential=True,
@@ -90,9 +99,57 @@ def get_accuracy(y, t):
     return np.mean(accuracies)
 
 
-def train(encoder_type='baseline'):
-    global lr
-    torch.set_default_tensor_type(torch.cuda.FloatTensor)
+def save_checkpoint(classifier, optimizer, encoder, epoch, best_dev_accuracy, checkpoint_path='.checkpoint/'):
+    global train_accuracies
+    global dev_accuracies
+    if not os.path.exists(checkpoint_path):
+        os.makedirs(checkpoint_path)
+    print("Checkpoint:\tsaving...", end='\r')
+    torch.save({"model_state_dict": classifier.state_dict(),
+                "encoder_state_dict": encoder.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "train_accuracies": train_accuracies,
+                "dev_accuracies": dev_accuracies,
+                "epoch": epoch,
+                "best_dev_accuracy": best_dev_accuracy},
+               checkpoint_path + checkpoint_name)
+    print("Checkpoint:\tsaved    ")
+
+
+def load_checkpoint(classifier, optimizer, encoder, epoch, best_dev_accuracy, checkpoint_path='.checkpoint/'):
+    global train_accuracies
+    global dev_accuracies
+    if os.path.exists(checkpoint_path + checkpoint_name):
+        print("Checkpoint:\tloading...", end='\r')
+        checkpoint = torch.load(checkpoint_path + checkpoint_name)
+        classifier.load_state_dict(checkpoint['model_state_dict'])
+        encoder.load_state_dict(checkpoint['encoder_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        train_accuracies = checkpoint['train_accuracies']
+        dev_accuracies = checkpoint['dev_accuracies']
+        epoch = checkpoint['epoch'] + 1
+        best_dev_accuracy = checkpoint['best_dev_accuracy']
+        print("Checkpoint:\tloaded    ")
+    return classifier, optimizer, encoder, epoch, best_dev_accuracy
+
+
+def save_model(encoder, classifier):
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
+    print("Model:\t\tsaving...", end='\r')
+    torch.save({"encoder_state_dict": encoder.state_dict(),
+                "model_state_dict": classifier.state_dict()},
+               model_path + model_name)
+    print("Model:\t\tsaved    ")
+
+
+def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
+    if encoder_type not in encoder_types:
+        encoder_type = 'baseline'
+    global checkpoint_name
+    global model_name
+    checkpoint_name = encoder_type + '_' + checkpoint_name
+    model_name = encoder_type + '_' + model_name
 
     if encoder_type == 'baseline':
         encoder = Baseline().to(device)
@@ -105,12 +162,10 @@ def train(encoder_type='baseline'):
     else:
         encoder = Baseline().to(device)
     print("Encoder:\t" + encoder_type.upper())
-    print()
 
     classifier = MLPClassifier(encoder, batch_size).to(device)
-
+    global lr
     optimizer = torch.optim.SGD(classifier.parameters(), lr=lr, weight_decay=weight_decay)
-
     cross_entropy = torch.nn.CrossEntropyLoss()
 
     train_set, dev_set, test_set = reduce_dataset(full_train_set,
@@ -119,9 +174,21 @@ def train(encoder_type='baseline'):
                                                   n_samples=data_limit)
 
     best_dev_accuracy = 0
+    start_epoch = 0
+
+    # load checkpoint if it exists
+    classifier, optimizer, encoder, start_epoch, best_dev_accuracy = load_checkpoint(classifier,
+                                                                                     optimizer,
+                                                                                     encoder,
+                                                                                     start_epoch,
+                                                                                     best_dev_accuracy,
+                                                                                     checkpoint_path)
+
+    if start_epoch > 0:
+        print("Resuming from epoch " + str(start_epoch) + "...")
 
     # one iteration of this loop is an epoch
-    for epoch in range(max_epochs):
+    for epoch in range(start_epoch, max_epochs):
         # accuracies
         epoch_train_accuracies = []
         epoch_dev_accuracies = []
@@ -174,26 +241,33 @@ def train(encoder_type='baseline'):
             epoch_dev_accuracies.append(get_accuracy(preds, l_batch))
         epoch_dev_accuracy = np.mean(epoch_dev_accuracies)
 
+        print("Epoch", (str(epoch + 1) if epoch + 1 > 9 else ' ' + str(epoch + 1)) + ":",
+              "\tTRAIN =", round(epoch_train_accuracy * 100, 1), "%\n",
+              "\t\tDEV   =", round(epoch_dev_accuracy * 100, 1), "%")
+
         # learning rate update condition
         if epoch == 0:
             best_dev_accuracy = epoch_dev_accuracy
         else:
-            if epoch_dev_accuracy < best_dev_accuracy:
+            if epoch_dev_accuracy > best_dev_accuracy:
+                # save the model since the dev accuracy went down
+                save_model(encoder, classifier)
                 best_dev_accuracy = epoch_dev_accuracy
                 lr *= lr_decay
                 for group in optimizer.param_groups:
                     group['lr'] = lr
 
-        print("Epoch", (str(epoch + 1) if epoch + 1 > 9 else ' ' + str(epoch + 1)) + ":",
-              "\tTRAIN =", round(epoch_train_accuracy, 3)*100, "%\n",
-              "\t\tDEV   =", round(epoch_dev_accuracy, 3)*100, "%")
-
         # termination condition
         if lr < lr_threshold:
-            "Training complete"
+            print("Training complete")
             break
 
-        # TODO: add checkpoint and best model saving
+        save_checkpoint(classifier,
+                        optimizer,
+                        encoder,
+                        epoch,
+                        best_dev_accuracy,
+                        checkpoint_path)
 
 
 if __name__ == '__main__':
@@ -202,15 +276,15 @@ if __name__ == '__main__':
     else:
         encoder_type = 'baseline'
     if len(sys.argv) > 2:
-        model_name = sys.argv[2].lower()
+        model_name = sys.argv[2].lower() + '.tar'
     else:
-        model_name = 'model'
+        model_name = 'model.tar'
     if len(sys.argv) > 3:
         checkpoint_path = sys.argv[3]
     else:
-        checkpoint_path = '.checkpoints/'
+        checkpoint_path = '.checkpoint/'
     if len(sys.argv) > 4:
-        train_data_path = sys.argv[4]
+        data_path = sys.argv[4]
     else:
-        train_data_path = '.data/'
-    train(encoder_type=encoder_type)
+        data_path = '.data/'
+    train(encoder_type=encoder_type, checkpoint_path=checkpoint_path)
