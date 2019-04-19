@@ -4,6 +4,10 @@ import nltk
 import sys
 import os
 import numpy as np
+from datetime import datetime
+from tensorboardX import SummaryWriter
+# to run tensorboard later, go in the run folder and run
+# tensorboard --logdir ./ --host=127.0.0.1
 
 from encoder import Baseline, LSTM, BiLSTM
 from classifier import MLPClassifier
@@ -159,6 +163,12 @@ def save_model(classifier, optimizer, encoder, epoch, best_dev_accuracy):
 
 
 def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
+
+    # initialize tensorboardX SummaryWriter
+    time_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_dir = 'tensorboard/' + time_string + '_' + encoder_type
+    writer = SummaryWriter(log_dir=log_dir)
+
     if encoder_type not in encoder_types:
         encoder_type = 'baseline'
     global checkpoint_name
@@ -242,7 +252,11 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
             epoch_train_losses.append(loss.item())
         epoch_train_accuracy = np.mean(epoch_train_accuracies)
         train_accuracies.append(epoch_train_accuracy)
-        train_losses.append(np.mean(epoch_train_losses))
+        writer.add_scalar("Training accuracy vs epochs", epoch_train_accuracy, epoch)
+
+        epoch_train_loss = np.mean(epoch_train_losses)
+        train_losses.append(epoch_train_loss)
+        writer.add_scalar("Training loss vs epochs", epoch_train_loss, epoch)
 
         # iteration of dev
         for batch in dev_iter:
@@ -261,7 +275,11 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
             epoch_dev_losses.append(loss.item())
         epoch_dev_accuracy = np.mean(epoch_dev_accuracies)
         dev_accuracies.append(epoch_dev_accuracy)
-        dev_losses.append(np.mean(epoch_dev_losses))
+        writer.add_scalar("Development accuracy vs epochs", epoch_dev_accuracy, epoch)
+
+        epoch_dev_loss = np.mean(epoch_dev_losses)
+        dev_losses.append(epoch_dev_loss)
+        writer.add_scalar("Development loss vs epochs", epoch_dev_loss, epoch)
 
         print("Epoch", (str(epoch + 1) if epoch + 1 > 9 else ' ' + str(epoch + 1)) + ":",
               "\tTRAIN =", round(epoch_train_accuracy * 100, 1), "%\n",
@@ -270,6 +288,11 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
         # learning rate update condition
         if epoch == 0:
             best_dev_accuracy = epoch_dev_accuracy
+            save_model(classifier,
+                       optimizer,
+                       encoder,
+                       epoch,
+                       best_dev_accuracy)
         else:
             if epoch_dev_accuracy > best_dev_accuracy:
                 # save the model since the dev accuracy went down
@@ -282,6 +305,7 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
                 lr *= lr_decay
                 for group in optimizer.param_groups:
                     group['lr'] = lr
+        writer.add_scalar("Learning rate vs epochs", lr, epoch)
 
         # termination condition
         if lr < lr_threshold:
@@ -295,6 +319,8 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
                         epoch,
                         best_dev_accuracy,
                         checkpoint_path)
+
+    writer.close()
 
 
 if __name__ == '__main__':
