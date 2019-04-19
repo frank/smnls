@@ -96,8 +96,7 @@ class BiLSTM(nn.Module):
         if self.maxpooling:
             y = self.get_maxpooled_encoding(y_full, y_lens)
         else:
-            y = torch.stack([y_full[l - 1, i, :] for i, l in enumerate(y_lens)])
-
+            y = self.get_sentence_encodings(y_full, y_lens)
         return y
 
     def get_dimensionality(self):
@@ -111,7 +110,6 @@ class BiLSTM(nn.Module):
             y.append(maxpool)
         return torch.stack(y)
 
-    # TODO: delete once sure torch doesn't preserve word-hidden state correspondence
     def get_sentence_encodings(self, y_full, y_lens):
         # in the third dimension, 0 is now forward and 1 backward
         y_unpacked = y_full.view(max(y_lens), 64, 2, self.hidden_size)
