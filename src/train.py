@@ -82,7 +82,7 @@ def get_accuracy(y, t):
 def train(args):
     torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-    encoder = BiLSTM().to(device)
+    encoder = BiLSTM(maxpooling=True).to(device)
     classifier = MLPClassifier(encoder, batch_size).to(device)
 
     # optimizer = torch.optim.SGD(classifier.parameters(), lr=0.1, weight_decay=0.01)

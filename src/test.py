@@ -16,7 +16,7 @@ with open("batch_ex.pkl", "rb") as file:
 p_batch, h_batch, l_batch = batch['p'], batch['h'], batch['l']
 # ------------------------------ INITIALIZATION --------------------------------
 
-encoder = BiLSTMaxpooling().to(device=device)
+encoder = BiLSTM(maxpooling=True).to(device=device)
 classifier = MLPClassifier(encoder, batch_size).to(device=device)
 optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-3, weight_decay=0.01)
 cross_entropy = torch.nn.CrossEntropyLoss()

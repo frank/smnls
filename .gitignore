@@ -1,5 +1,6 @@
 # GloVe
-src/glove.840B.300d.txt
+src/.vector_cache/
+src/.data/
 
 # PyCharm
 .idea/
