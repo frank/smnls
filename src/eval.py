@@ -21,7 +21,7 @@ def tokenizer(sentence):
 
 # Parameters
 batch_size = 64
-data_limit = 15
+data_limit = 0
 encoder_types = [
     'baseline',
     'lstm',
@@ -91,16 +91,14 @@ def get_accuracy(y, t):
 
 
 def load_model(encoder, classifier, model_path):
-    print("Model:\t\tloading...", end='\r')
     model = torch.load(model_path)
     encoder.load_state_dict(model['encoder_state_dict'])
     classifier.load_state_dict(model['model_state_dict'])
-    print("Model:\t\tloaded    ")
     return encoder, classifier
 
 
 def test(model_folder='models/', data_path='.data/'):
-    
+
     train_set, dev_set, test_set = reduce_dataset(full_train_set,
                                                   full_dev_set,
                                                   full_test_set,
@@ -108,6 +106,7 @@ def test(model_folder='models/', data_path='.data/'):
 
     for encoder_type in encoder_types:
 
+        print()
         accuracies = []
 
         model_path = model_folder + encoder_type + '_model.tar'

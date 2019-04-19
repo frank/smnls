@@ -26,9 +26,11 @@ weight_decay = 0.01
 lr_threshold = 1e-5
 batch_size = 64
 max_epochs = 100
-data_limit = 15
+data_limit = 0
 train_accuracies = []
 dev_accuracies = []
+train_losses = []
+dev_losses = []
 model_path = 'models/'
 checkpoint_name = 'checkpoint.tar'
 encoder_types = [
@@ -110,6 +112,8 @@ def save_checkpoint(classifier, optimizer, encoder, epoch, best_dev_accuracy, ch
                 "optimizer_state_dict": optimizer.state_dict(),
                 "train_accuracies": train_accuracies,
                 "dev_accuracies": dev_accuracies,
+                "train_losses": train_losses,
+                "dev_losses": dev_losses,
                 "epoch": epoch,
                 "best_dev_accuracy": best_dev_accuracy},
                checkpoint_path + checkpoint_name)
@@ -119,6 +123,8 @@ def save_checkpoint(classifier, optimizer, encoder, epoch, best_dev_accuracy, ch
 def load_checkpoint(classifier, optimizer, encoder, epoch, best_dev_accuracy, checkpoint_path='.checkpoint/'):
     global train_accuracies
     global dev_accuracies
+    global train_losses
+    global dev_losses
     if os.path.exists(checkpoint_path + checkpoint_name):
         print("Checkpoint:\tloading...", end='\r')
         checkpoint = torch.load(checkpoint_path + checkpoint_name)
@@ -127,18 +133,27 @@ def load_checkpoint(classifier, optimizer, encoder, epoch, best_dev_accuracy, ch
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         train_accuracies = checkpoint['train_accuracies']
         dev_accuracies = checkpoint['dev_accuracies']
+        train_losses = checkpoint['train_losses']
+        dev_losses = checkpoint['dev_losses']
         epoch = checkpoint['epoch'] + 1
         best_dev_accuracy = checkpoint['best_dev_accuracy']
         print("Checkpoint:\tloaded    ")
     return classifier, optimizer, encoder, epoch, best_dev_accuracy
 
 
-def save_model(encoder, classifier):
+def save_model(classifier, optimizer, encoder, epoch, best_dev_accuracy):
     if not os.path.exists(model_path):
         os.makedirs(model_path)
     print("Model:\t\tsaving...", end='\r')
-    torch.save({"encoder_state_dict": encoder.state_dict(),
-                "model_state_dict": classifier.state_dict()},
+    torch.save({"model_state_dict": classifier.state_dict(),
+                "encoder_state_dict": encoder.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "train_accuracies": train_accuracies,
+                "dev_accuracies": dev_accuracies,
+                "train_losses": train_losses,
+                "dev_losses": dev_losses,
+                "epoch": epoch,
+                "best_dev_accuracy": best_dev_accuracy},
                model_path + model_name)
     print("Model:\t\tsaved    ")
 
@@ -192,6 +207,8 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
         # accuracies
         epoch_train_accuracies = []
         epoch_dev_accuracies = []
+        epoch_train_losses = []
+        epoch_dev_losses = []
 
         train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(datasets=(train_set, dev_set, test_set),
                                                                                batch_sizes=(
@@ -220,10 +237,12 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
             # update weights
             optimizer.step()
 
-            # compute accuracies
+            # compute accuracies and losses
             epoch_train_accuracies.append(get_accuracy(preds, l_batch))
+            epoch_train_losses.append(loss.item())
         epoch_train_accuracy = np.mean(epoch_train_accuracies)
         train_accuracies.append(epoch_train_accuracy)
+        train_losses.append(np.mean(epoch_train_losses))
 
         # iteration of dev
         for batch in dev_iter:
@@ -239,7 +258,10 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
 
             # compute accuracies
             epoch_dev_accuracies.append(get_accuracy(preds, l_batch))
+            epoch_dev_losses.append(loss.item())
         epoch_dev_accuracy = np.mean(epoch_dev_accuracies)
+        dev_accuracies.append(epoch_dev_accuracy)
+        dev_losses.append(np.mean(epoch_dev_losses))
 
         print("Epoch", (str(epoch + 1) if epoch + 1 > 9 else ' ' + str(epoch + 1)) + ":",
               "\tTRAIN =", round(epoch_train_accuracy * 100, 1), "%\n",
@@ -251,7 +273,11 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
         else:
             if epoch_dev_accuracy > best_dev_accuracy:
                 # save the model since the dev accuracy went down
-                save_model(encoder, classifier)
+                save_model(classifier,
+                           optimizer,
+                           encoder,
+                           epoch,
+                           best_dev_accuracy)
                 best_dev_accuracy = epoch_dev_accuracy
                 lr *= lr_decay
                 for group in optimizer.param_groups:
@@ -259,6 +285,7 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
 
         # termination condition
         if lr < lr_threshold:
+
             print("Training complete")
             break
 
