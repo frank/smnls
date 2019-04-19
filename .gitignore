@@ -1,6 +1,8 @@
 # GloVe
 src/.vector_cache/
 src/.data/
+src/.checkpoints/
+src/models/
 
 # PyCharm
 .idea/
