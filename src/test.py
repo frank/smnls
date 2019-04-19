@@ -1,3 +1,4 @@
+import sys
 import torch
 import pickle
 
@@ -8,6 +9,11 @@ from classifier import MLPClassifier
 torch.set_default_tensor_type(torch.cuda.FloatTensor)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+if len(sys.argv) > 1:
+    encoder_type = sys.argv[1].lower()
+else:
+    encoder_type = 'baseline'
+
 batch_size = 64
 
 with open("batch_ex.pkl", "rb") as file:
@@ -16,7 +22,18 @@ with open("batch_ex.pkl", "rb") as file:
 p_batch, h_batch, l_batch = batch['p'], batch['h'], batch['l']
 # ------------------------------ INITIALIZATION --------------------------------
 
-encoder = BiLSTM(maxpooling=True).to(device=device)
+if encoder_type == 'baseline':
+    encoder = Baseline().to(device)
+elif encoder_type == 'lstm':
+    encoder = LSTM().to(device)
+elif encoder_type == 'bilstm':
+    encoder = BiLSTM().to(device)
+elif encoder_type == 'maxbilstm':
+    encoder = BiLSTM(maxpooling=True).to(device)
+else:
+    encoder = Baseline().to(device)
+print("Encoder:\t" + encoder_type.upper())
+
 classifier = MLPClassifier(encoder, batch_size).to(device=device)
 optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-3, weight_decay=0.01)
 cross_entropy = torch.nn.CrossEntropyLoss()

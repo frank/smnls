@@ -111,11 +111,12 @@ class BiLSTM(nn.Module):
         return torch.stack(y)
 
     def get_sentence_encodings(self, y_full, y_lens):
+        batch_size = len(y_lens)
         # in the third dimension, 0 is now forward and 1 backward
-        y_unpacked = y_full.view(max(y_lens), 64, 2, self.hidden_size)
+        y_unpacked = y_full.view(max(y_lens), batch_size, 2, self.hidden_size)
 
         y = []
-        for b in range(64):
+        for b in range(batch_size):
             forward = y_unpacked[y_lens[b]-1, b, 0, :]
             backward = y_unpacked[0, b, 1, :]
             y.append(torch.cat((forward, backward)))
