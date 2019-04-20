@@ -26,11 +26,12 @@ def tokenizer(sentence):
 # Parameters
 lr = 0.1
 lr_decay = 0.2
-weight_decay = 0.01
+lr_weight_decay = 0.99
+weight_decay = 1e-3
 lr_threshold = 1e-5
 batch_size = 64
-max_epochs = 100
-data_limit = 0
+max_epochs = 200
+data_limit = 15
 train_accuracies = []
 dev_accuracies = []
 train_losses = []
@@ -286,7 +287,7 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
               "\t\tDEV   =", round(epoch_dev_accuracy * 100, 1), "%")
 
         # learning rate update condition
-        if epoch == 0:
+        if epoch == start_epoch:
             best_dev_accuracy = epoch_dev_accuracy
             save_model(classifier,
                        optimizer,
@@ -294,22 +295,25 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
                        epoch,
                        best_dev_accuracy)
         else:
+            if epoch_dev_accuracy < best_dev_accuracy:
+                # update learning rate
+                lr *= lr_decay
+                print("Learning rate updated: lr =", lr)
+                for group in optimizer.param_groups:
+                    group['lr'] = lr
             if epoch_dev_accuracy > best_dev_accuracy:
+                best_dev_accuracy = epoch_dev_accuracy
                 # save the model since the dev accuracy went down
                 save_model(classifier,
                            optimizer,
                            encoder,
                            epoch,
                            best_dev_accuracy)
-                best_dev_accuracy = epoch_dev_accuracy
-                lr *= lr_decay
-                for group in optimizer.param_groups:
-                    group['lr'] = lr
+
         writer.add_scalar("Learning rate vs epochs", lr, epoch)
 
         # termination condition
         if lr < lr_threshold:
-
             print("Training complete")
             break
 
@@ -320,6 +324,8 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
                         best_dev_accuracy,
                         checkpoint_path)
 
+    if os.path.exists(checkpoint_path + checkpoint_name):
+        os.remove(checkpoint_path + checkpoint_name)
     writer.close()
 
 
