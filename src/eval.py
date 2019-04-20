@@ -107,7 +107,8 @@ def test(model_folder='models/', data_path='.data/'):
     for encoder_type in encoder_types:
 
         print()
-        accuracies = []
+        dev_accuracies = []
+        test_accuracies = []
 
         model_path = model_folder + encoder_type + '_model.tar'
         if not os.path.exists(model_path):
@@ -138,6 +139,19 @@ def test(model_folder='models/', data_path='.data/'):
                                                                                device=device,
                                                                                shuffle=True)
 
+        # iteration of dev
+        for batch in dev_iter:
+            # p_batch and h_batch are tuples. The first element is the
+            # embedded batch, and the second contains all sentence lengths
+            p_batch, h_batch, l_batch = preprocess_batch(batch)
+
+            # forward pass
+            preds = classifier.forward(p_batch, h_batch)
+
+            # compute accuracies
+            dev_accuracies.append(get_accuracy(preds, l_batch))
+        dev_accuracy = np.mean(dev_accuracies)
+
         # iteration of test
         for batch in test_iter:
             # p_batch and h_batch are tuples. The first element is the
@@ -148,10 +162,11 @@ def test(model_folder='models/', data_path='.data/'):
             preds = classifier.forward(p_batch, h_batch)
 
             # compute accuracies
-            accuracies.append(get_accuracy(preds, l_batch))
-        accuracy = np.mean(accuracies)
+            test_accuracies.append(get_accuracy(preds, l_batch))
+        test_accuracy = np.mean(test_accuracies)
 
-        print("Accuracy: ", round(accuracy * 100, 1), "%")
+        print("Test accuracy: ", round(test_accuracy * 100, 1), "%")
+        print("Dev accuracy: ", round(dev_accuracy * 100, 1), "%")
 
 
 if __name__ == '__main__':
