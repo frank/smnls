@@ -178,7 +178,7 @@ if __name__ == '__main__':
     else:
         model_folder = 'models/bad_run/'
     if len(sys.argv) > 2:
-        data_path = sys.argv[4]
+        data_path = sys.argv[2]
     else:
         data_path = '.data/'
     test(model_folder=model_folder, data_path=data_path)
