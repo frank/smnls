@@ -110,7 +110,7 @@ def get_accuracy(y, t):
 
 def save_checkpoint(classifier, optimizer, encoder, epoch,
                     last_dev_accuracy, best_dev_accuracy,
-                    writer, checkpoint_path='.checkpoint/'):
+                    checkpoint_path='.checkpoint/'):
     global train_accuracies
     global dev_accuracies
     if not os.path.exists(checkpoint_path):
@@ -125,15 +125,14 @@ def save_checkpoint(classifier, optimizer, encoder, epoch,
                 "dev_losses": dev_losses,
                 "epoch": epoch,
                 "last_dev_accuracy": last_dev_accuracy,
-                "best_dev_accuracy": best_dev_accuracy,
-                "summary_writer": writer},
+                "best_dev_accuracy": best_dev_accuracy},
                checkpoint_path + checkpoint_name)
     print("Checkpoint:\tsaved    ")
 
 
 def load_checkpoint(classifier, optimizer, encoder, epoch,
                     last_dev_accuracy, best_dev_accuracy,
-                    writer, checkpoint_path='.checkpoint/'):
+                    checkpoint_path='.checkpoint/'):
     global train_accuracies
     global dev_accuracies
     global train_losses
@@ -151,9 +150,8 @@ def load_checkpoint(classifier, optimizer, encoder, epoch,
         epoch = checkpoint['epoch'] + 1
         last_dev_accuracy = checkpoint['last_dev_accuracy']
         best_dev_accuracy = checkpoint['best_dev_accuracy']
-        writer = checkpoint['summary_writer']
         print("Checkpoint:\tloaded    ")
-    return classifier, optimizer, encoder, epoch, last_dev_accuracy, best_dev_accuracy, writer
+    return classifier, optimizer, encoder, epoch, last_dev_accuracy, best_dev_accuracy
 
 
 def save_model(classifier, optimizer, encoder, epoch, last_dev_accuracy, best_dev_accuracy):
@@ -214,14 +212,13 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
     start_epoch = 0
 
     # load checkpoint if it exists
-    classifier, optimizer, encoder, epoch, last_dev_accuracy, best_dev_accuracy, writer = load_checkpoint(classifier,
-                                                                                                          optimizer,
-                                                                                                          encoder,
-                                                                                                          start_epoch,
-                                                                                                          last_dev_accuracy,
-                                                                                                          best_dev_accuracy,
-                                                                                                          writer,
-                                                                                                          checkpoint_path)
+    classifier, optimizer, encoder, epoch, last_dev_accuracy, best_dev_accuracy = load_checkpoint(classifier,
+                                                                                                  optimizer,
+                                                                                                  encoder,
+                                                                                                  start_epoch,
+                                                                                                  last_dev_accuracy,
+                                                                                                  best_dev_accuracy,
+                                                                                                  checkpoint_path)
 
     if start_epoch > 0:
         print("Resuming from epoch " + str(start_epoch) + "...")
@@ -242,6 +239,7 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
 
         # iteration of training
         classifier.train()
+        encoder.train()
         for batch in train_iter:
             # p_batch and h_batch are tuples. The first element is the
             # embedded batch, and the second contains all sentence lengths
@@ -273,6 +271,7 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
 
         # iteration of dev
         classifier.eval()
+        encoder.eval()
         for batch in dev_iter:
             # p_batch and h_batch are tuples. The first element is the
             # embedded batch, and the second contains all sentence lengths
@@ -342,7 +341,6 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
                         epoch,
                         last_dev_accuracy,
                         best_dev_accuracy,
-                        writer,
                         checkpoint_path)
 
     if os.path.exists(checkpoint_path + checkpoint_name):

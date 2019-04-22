@@ -53,6 +53,8 @@ print("Embeddings:\tloading...", end='\r')
 embedding = torch.nn.Embedding.from_pretrained(text_field.vocab.vectors)
 embedding.requires_grad = False
 print("Embeddings:\tloaded    ")
+
+
 # ------------------------------ INITIALIZATION --------------------------------
 
 
@@ -94,11 +96,11 @@ def load_model(encoder, classifier, model_path):
     model = torch.load(model_path)
     encoder.load_state_dict(model['encoder_state_dict'])
     classifier.load_state_dict(model['model_state_dict'])
-    return encoder, classifier
+    end_epoch = model['epoch']
+    return encoder, classifier, end_epoch
 
 
 def test(model_folder='models/', data_path='.data/'):
-
     train_set, dev_set, test_set = reduce_dataset(full_train_set,
                                                   full_dev_set,
                                                   full_test_set,
@@ -129,9 +131,9 @@ def test(model_folder='models/', data_path='.data/'):
 
         classifier = MLPClassifier(encoder, batch_size).to(device)
 
-        encoder, classifier = load_model(encoder,
-                                         classifier,
-                                         model_path)
+        encoder, classifier, end_epoch = load_model(encoder,
+                                                    classifier,
+                                                    model_path)
 
         train_iter, dev_iter, test_iter = torchtext.data.BucketIterator.splits(datasets=(train_set, dev_set, test_set),
                                                                                batch_sizes=(
@@ -167,13 +169,14 @@ def test(model_folder='models/', data_path='.data/'):
 
         print("Test accuracy: ", round(test_accuracy * 100, 1), "%")
         print("Dev accuracy: ", round(dev_accuracy * 100, 1), "%")
+        print("Total training epochs:", end_epoch)
 
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         model_folder = sys.argv[1]
     else:
-        model_folder = 'models/'
+        model_folder = 'models/bad_run/'
     if len(sys.argv) > 2:
         data_path = sys.argv[4]
     else:
