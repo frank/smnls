@@ -11,6 +11,7 @@ from classifier import MLPClassifier
 
 # Cuda parameters
 torch.set_default_tensor_type(torch.cuda.FloatTensor)
+dtype = torch.float
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Parameters
@@ -44,14 +45,14 @@ def get_batch(sentences, vocab):
 
     # initialize batch elements
     batch = torch.zeros(max_len, n_sentences, 300)
-    batch_lens = torch.tensor(lengths)
+    batch_lens = torch.tensor(lengths, dtype=dtype)
 
     # produce embeddings
     for n in range(n_sentences):
         for l, word in enumerate(tokenized[n]):
             batch[l, n] = vocab[word]
 
-    return batch, batch_lens
+    return batch.to(device), batch_lens.to(device)
 
 
 def load_model(encoder, classifier, model_path):
@@ -90,7 +91,7 @@ def infer():
     n_sentences = len(p_batch[1])
 
     # load the right model
-    model_path = 'models/bad_run/' + model_type + '_model.tar'
+    model_path = 'models/' + model_type + '_model.tar'
     assert os.path.exists(model_path)
     print("Using", model_type.upper(), "model")
 

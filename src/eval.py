@@ -176,7 +176,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         model_folder = sys.argv[1]
     else:
-        model_folder = 'models/bad_run/'
+        model_folder = 'models/'
     if len(sys.argv) > 2:
         data_path = sys.argv[2]
     else:
