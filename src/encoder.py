@@ -117,7 +117,7 @@ class BiLSTM(nn.Module):
 
         y = []
         for b in range(batch_size):
-            forward = y_unpacked[y_lens[b]-1, b, 0, :]
+            forward = y_unpacked[y_lens[b] - 1, b, 0, :]
             backward = y_unpacked[0, b, 1, :]
             y.append(torch.cat((forward, backward)))
 
