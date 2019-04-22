@@ -1,18 +1,19 @@
 from datetime import datetime
-import numpy as np
 import torchtext
 import pickle
 import torch
 import sys
 import os
 
-import SentEval.senteval as senteval
-
 from encoder import Baseline, LSTM, BiLSTM
+
+sys.path.insert(0, 'senteval/')
+import senteval
 
 # ------------------------------ INITIALIZATION --------------------------------
 # Cuda parameters
 torch.set_default_tensor_type(torch.cuda.FloatTensor)
+dtype = torch.float
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Parameters
@@ -70,8 +71,27 @@ def prepare(params, samples):
 
 
 def batcher(params, batch):
-    # TODO: make this
-    pass
+    batch = [sent if sent != [] else ['.'] for sent in batch]
+
+    # get useful parameters
+    n_sentences = len(batch)
+    lengths = [len(tok) for tok in batch]
+    max_len = max(lengths)
+
+    # initialize batch elements
+    tensor_batch = torch.zeros(max_len, n_sentences, 300)
+    batch_lens = torch.tensor(lengths, dtype=dtype)
+
+    # produce embeddings
+    for n in range(n_sentences):
+        for l, word in enumerate(batch[n]):
+            tensor_batch[l, n] = params.word_vec[word]
+
+    batch, batch_lens = (tensor_batch.to(device), batch_lens.to(device))
+    embeddings = params['encoder'](batch, batch_lens)
+
+    # embeddings is a np.array containing the sentence embeddings
+    return embeddings.cpu().numpy()
 
 
 def stest():
@@ -100,7 +120,7 @@ def stest():
                            'kfold': 5,
                            'classifier': {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128,
                                           'tenacity': 3, 'epoch_size': 2},
-                           'infersent': encoder.to(device)}
+                           'encoder': encoder.to(device)}
         # senteval engine
         se = senteval.engine.SE(params_senteval, batcher, prepare)
 

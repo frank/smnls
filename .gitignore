@@ -3,8 +3,7 @@ src/.vector_cache/
 src/.data/
 src/.checkpoints/
 src/models/
-src/batch_ex.pkl
-src/test.py
+src/senteval/data/
 
 # PyCharm
 .idea/
