@@ -2,9 +2,7 @@ import os
 import sys
 import nltk
 import torch
-import pickle
 import torchtext
-import numpy as np
 
 from encoder import Baseline, LSTM, BiLSTM
 from classifier import MLPClassifier
@@ -63,11 +61,6 @@ def load_model(encoder, classifier, model_path):
 
 
 def infer():
-    """
-    Step 1: load premises and hypotheses
-    Step 2: convert them into embeddings (keep their txt version saved)
-    Step 3:
-    """
     premises_txt = get_sentences(premises_path)
     hypotheses_txt = get_sentences(hypotheses_path)
 
