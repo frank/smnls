@@ -311,6 +311,12 @@ def train(encoder_type='baseline', checkpoint_path='.checkpoint/'):
                        last_dev_accuracy,
                        best_dev_accuracy)
         else:
+            # NOT IN CURRENT VERSION
+            # apply learning rate decay
+            lr = lr * lr_weight_decay
+            # NOT IN CURRENT VERSION
+            for group in optimizer.param_groups:
+                group['lr'] = lr
             if epoch_dev_accuracy < last_dev_accuracy:
                 # update learning rate
                 lr *= lr_decay

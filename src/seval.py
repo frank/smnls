@@ -121,7 +121,7 @@ def stest():
 
         # task list
         if task_size == 'reduced':
-            transfer_tasks = ['MR', 'SICKEntailment', 'STS14', 'STSBenchmark']
+            transfer_tasks = ['MR', 'CR', 'SUBJ', 'TREC', 'STS14']
         else:
             transfer_tasks = ['CR', 'MR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC', 'SNLI',
                               'SICKEntailment', 'SICKRelatedness', 'STSBenchmark', 'ImageCaptionRetrieval',
