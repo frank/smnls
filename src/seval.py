@@ -152,9 +152,47 @@ def stest():
             pickle.dump(results, file)
 
 
+def load_results():
+    results = {}
+
+    with open('senteval_results/baseline', 'rb') as file:
+        results['baseline'] = pickle.load(file)
+
+    with open('senteval_results/lstm', 'rb') as file:
+        results['lstm'] = pickle.load(file)
+
+    with open('senteval_results/bilstm', 'rb') as file:
+        results['bilstm'] = pickle.load(file)
+
+    with open('senteval_results/maxbilstm', 'rb') as file:
+        results['maxbilstm'] = pickle.load(file)
+
+    encoder_types = ['baseline', 'lstm', 'bilstm', 'maxbilstm']
+
+    print("Results on the STS14 multilingual textual similarity task:")
+
+    for encoder_type in encoder_types:
+        print("\n############################")
+        print(encoder_type.upper(), "encoder:")
+        for task in results[encoder_type]:
+            print('\n' + task + '-------------\n')
+            for measure in results[encoder_type][task]:
+                print(measure + ":", results[encoder_type][task][measure])
+        print()
+
+
 if __name__ == '__main__':
+    load = False
     if len(sys.argv) > 1:
-        model_folder = sys.argv[1]
+        if sys.argv[1] == '-l':
+            load = True
+            model_folder = 'models/'
+        else:
+            model_folder = sys.argv[1]
     else:
         model_folder = 'models/'
-    stest()
+    if not load:
+        stest()
+    else:
+        load_results()
+

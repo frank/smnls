@@ -32,7 +32,7 @@ The results of the SentEval test are both printed and saved. They can
 later be printed again by running:
 
 ```bash
-$ python process_seval_results.py
+$ python seval.py -l
 ```
 
 Finally, each of the four encoders can be tested on a user provided
