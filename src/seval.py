@@ -19,8 +19,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Parameters
 task_size = 'reduced'
 encoder_types = [
-    # 'baseline',
-    # 'lstm',
+    'baseline',
+    'lstm',
     'bilstm',
     'maxbilstm'
 ]
