@@ -19,8 +19,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Parameters
 task_size = 'reduced'
 encoder_types = [
-    'baseline',
-    'lstm',
+    # 'baseline',
+    # 'lstm',
     'bilstm',
     'maxbilstm'
 ]
@@ -91,7 +91,7 @@ def batcher(params, batch):
     embeddings = params['encoder'](batch, batch_lens)
 
     # embeddings is a np.array containing the sentence embeddings
-    return embeddings.cpu().numpy()
+    return embeddings.cpu().detach().numpy()
 
 
 def stest():

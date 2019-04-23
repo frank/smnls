@@ -136,10 +136,6 @@ if __name__ == '__main__':
         hypotheses_path = sys.argv[3]
     else:
         hypotheses_path = 'examples/hypotheses.txt'
-    if len(sys.argv) > 4:
-        hypotheses_path = sys.argv[4]
-    else:
-        hypotheses_path = 'examples/hypotheses.txt'
     if model_type not in model_types:
         print("Unknown model type. Using BASELINE")
         model_type = 'baseline'
