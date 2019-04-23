@@ -25,11 +25,6 @@ encoder_types = [
     'maxbilstm'
 ]
 
-print()
-print("GloVe:\t\tloading...", end='\r')
-glove = torchtext.vocab.GloVe()
-print("GloVe:\t\tloaded    ")
-
 
 # ------------------------------ INITIALIZATION --------------------------------
 
@@ -172,10 +167,13 @@ def load_results():
     print("Results on the STS14 multilingual textual similarity task:")
 
     for encoder_type in encoder_types:
-        print("\n############################")
+        print("\n##################################")
         print(encoder_type.upper(), "encoder:")
         for task in results[encoder_type]:
-            print('\n' + task + '-------------\n')
+            print('\n' + task, end=' ')
+            for i in range(25 - len(task)):
+                print('-', end='')
+            print()
             for measure in results[encoder_type][task]:
                 print(measure + ":", results[encoder_type][task][measure])
         print()
@@ -192,6 +190,10 @@ if __name__ == '__main__':
     else:
         model_folder = 'models/'
     if not load:
+        print()
+        print("GloVe:\t\tloading...", end='\r')
+        glove = torchtext.vocab.GloVe()
+        print("GloVe:\t\tloaded    ")
         stest()
     else:
         load_results()
