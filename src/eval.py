@@ -100,38 +100,6 @@ def load_model(encoder, classifier, model_path):
     return encoder, classifier, end_epoch
 
 
-def get_metrics(all_predictions, all_labels):
-    predictions = {}
-    labels = {}
-
-    all_predictions = np.array([p.argmax() for p in all_predictions])
-    all_labels = np.array(all_labels)
-
-    c_idx = np.where(all_labels == 0)[0]
-    predictions['contradiction'] = np.array([all_predictions[idx] for idx in c_idx])
-    labels['contradiction'] = np.array([all_labels[idx] for idx in c_idx])
-
-    e_idx = np.where(all_labels == 1)[0]
-    predictions['entailment'] = np.array([all_predictions[idx] for idx in e_idx])
-    labels['entailment'] = np.array([all_labels[idx] for idx in e_idx])
-
-    n_idx = np.where(all_labels == 2)[0]
-    predictions['neutral'] = np.array([all_predictions[idx] for idx in n_idx])
-    labels['neutral'] = np.array([all_labels[idx] for idx in n_idx])
-
-    c_correct = len(np.where(predictions['contradiction'] == labels['contradiction'])[0])
-    e_correct = len(np.where(predictions['entailment'] == labels['entailment'])[0])
-    n_correct = len(np.where(predictions['neutral'] == labels['neutral'])[0])
-
-    micro = ((c_correct / len(predictions['contradiction'])) +
-             (e_correct / len(predictions['entailment'])) +
-             (n_correct / len(predictions['neutral']))) / 3
-
-    macro = (c_correct + e_correct + n_correct) / len(all_labels)
-
-    return micro, macro
-
-
 def test(model_folder='models/', data_path='.data/'):
     train_set, dev_set, test_set = reduce_dataset(full_train_set,
                                                   full_dev_set,
@@ -173,10 +141,6 @@ def test(model_folder='models/', data_path='.data/'):
                                                                                device=device,
                                                                                shuffle=True)
 
-        # used for micro and macro accuracy
-        all_predictions = []
-        all_labels = []
-
         # iteration of dev
         for batch in dev_iter:
             # p_batch and h_batch are tuples. The first element is the
@@ -186,14 +150,9 @@ def test(model_folder='models/', data_path='.data/'):
             # forward pass
             preds = classifier.forward(p_batch, h_batch)
 
-            all_predictions.extend(preds.detach().cpu().numpy())
-            all_labels.extend(l_batch.cpu().numpy())
-
             # compute accuracies
             dev_accuracies.append(get_accuracy(preds, l_batch))
         dev_accuracy = np.mean(dev_accuracies)
-
-        micro, macro = get_metrics(all_predictions, all_labels)
 
         # iteration of test
         for batch in test_iter:
@@ -210,8 +169,6 @@ def test(model_folder='models/', data_path='.data/'):
 
         print("Test accuracy: ", round(test_accuracy * 100, 1), "%")
         print("Dev accuracy: ", round(dev_accuracy * 100, 1), "%")
-        print("Micro accuracy: ", round(micro, 4))
-        print("Macro accuracy: ", round(macro, 4))
         print("Total training epochs:", end_epoch)
 
 

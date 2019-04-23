@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 import torchtext
 import pickle
 import torch
@@ -150,6 +151,7 @@ def stest():
 def load_results():
     results = {}
 
+    # load files for all four models
     with open('senteval_results/baseline', 'rb') as file:
         results['baseline'] = pickle.load(file)
 
@@ -164,19 +166,31 @@ def load_results():
 
     encoder_types = ['baseline', 'lstm', 'bilstm', 'maxbilstm']
 
-    print("Results on the STS14 multilingual textual similarity task:")
-
+    # get relevant values
     for encoder_type in encoder_types:
-        print("\n##################################")
-        print(encoder_type.upper(), "encoder:")
+
+        print("\n" + encoder_type.upper())
+
+        # used for computing micro and macro accuracies
+        dev_accuracies = np.array([])
+        dev_sizes = np.array([])
+
+        sts = {}
+
         for task in results[encoder_type]:
-            print('\n' + task, end=' ')
-            for i in range(25 - len(task)):
-                print('-', end='')
-            print()
-            for measure in results[encoder_type][task]:
-                print(measure + ":", results[encoder_type][task][measure])
-        print()
+            if task != 'STS14':
+                dev_accuracies = np.append(dev_accuracies, results[encoder_type][task]['devacc'])
+                dev_sizes = np.append(dev_sizes, results[encoder_type][task]['ndev'])
+            else:
+                sts_p_mean = results[encoder_type][task]['all']['pearson']['mean']
+                sts_p_wmean = results[encoder_type][task]['all']['pearson']['wmean']
+                sts_s_mean = results[encoder_type][task]['all']['pearson']['mean']
+                sts_s_wmean = results[encoder_type][task]['all']['pearson']['wmean']
+
+        macro = np.mean(dev_accuracies)
+        micro = sum(dev_accuracies * (dev_sizes / sum(dev_sizes)))
+        print("Macro:", round(macro, 1))
+        print("Micro:", round(micro, 1))
 
 
 if __name__ == '__main__':
